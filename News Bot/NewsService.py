@@ -1,24 +1,20 @@
 import requests
-class NewsService:
-
-    def currentCategory(self, id)-> str:
-        match id:
-            case 1:
+def currentCategory(category) -> str:
+        match category:
+            case "главное":
                 return "general"
-            case 2:
+            case "технологии":
                 return "technology"
-            case 3:
+            case "спорт":
                 return "sport"
-            case 4:
+            case "бизнес":
                 return "business"
-            case 5:
+            case "наука":
                 return "science"
 
-    def fetchNews(self, category) -> []:
+def fetchNews(category) -> []:
         arr = []
         url = f"https://newsapi.org/v2/top-headlines?country=ru&category={category}&apiKey=6b44da51f545440a81fd0ec4d6fc441a"
         response = requests.get(url)
-        for i in response.json()["articles"]:
-            article = i["title"]
-            arr.append(article)
+        arr = response.json()["articles"]
         return arr

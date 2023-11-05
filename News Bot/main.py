@@ -1,57 +1,45 @@
-from typing import Final
 from telegram import Update
 from telegram.ext import *
-from NewsService import *
+from telegram import *
+from telegram.ext import *
+from aiogram import types
+import NewsService
 
-TOKEN: Final = "5743423359:AAGbfTcbyvWsIBuOTt6iE-13WtGbqUbtK4Q"
-BOT_USENAME: Final = "@news123apibot"
+TOKEN = "5743423359:AAGbfTcbyvWsIBuOTt6iE-13WtGbqUbtK4Q"
+BOT_USENAME= "@news123apibot"
+bot = Bot(token=TOKEN)
 
-api = NewsService()
+categoriesList = ["главное", "технологии", "спорт", "бизнес", "наука"]
 
 # Commands
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('Здравствуйте!')
-    await update.message.reply_text('Выберите категорию новостей: \n1) главное \n2) технологии \n3) спорт \n4) бизнес \n5) наука')
-
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text('Выберите категорию новостей')
-
-async def custom_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text('')
+    keyboard = []
+    for item in categoriesList:
+        keyboard.append([InlineKeyboardButton(item, callback_data=item)])
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text('Выберите категорию новостей:', reply_markup=reply_markup)
 
 # Responses
-def handle_response(text: str) -> str:
-    number = int(text)
-    category = api.currentCategory(number)
-    news = api.fetchNews(category)
+async def button_handler(update, context):
+    query = update.callback_query
+    print(query.data)
+    await query.answer()
+    await query.edit_message_text(text=f'Вы выбрали категорию новостей: {query.data}')
+    await handle_categories(update, query.data)
 
-    message = f"категория: {category} \n\nколичество новостей: {len(news)}"
-    newsinfo = ""
+async def handle_categories(message, query: str):
 
-    for i in news:
-        newsinfo += f"\n\n{i}"
+    category = NewsService.currentCategory(category=query)
+    news = NewsService.fetchNews(category=category)
 
-    return message + newsinfo
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    message_type: str = update.message.chat.type
-    text: str = update.message.text
+    print(news)
 
-    print(f'User({update.message.chat.id}) in {message_type}: {text}')
-
-    if message_type == 'group':
-        if BOT_USENAME in text:
-            new_text: str = text.replace(BOT_USENAME, '').strip()
-            response: str = handle_response(new_text)
-        else:
-            return
-    else:
-        response: str = handle_response(text)
-
-    print('Bot: ', response)
-    await update.message.reply_text(response)
-
-async def error(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print(f"Update {update} caused error {context.error}")
+    for news_item in news:
+        image = "https://cdn.vectorstock.com/i/preview-1x/82/99/no-image-available-like-missing-picture-vector-43938299.jpg"
+        title = news_item["title"]
+        caption = f"{title}"
+        await bot.send_photo(chat_id=message.effective_chat.id, photo=image, caption=caption)
 
 if __name__ == '__main__':
     print("Starting bot...")
@@ -59,14 +47,7 @@ if __name__ == '__main__':
 
     # Commands
     app.add_handler(CommandHandler('start', start_command))
-    app.add_handler(CommandHandler('help', help_command))
-    app.add_handler(CommandHandler('custom', custom_command))
-
-    #Messages
-    app.add_handler(MessageHandler(filters.TEXT, handle_message))
-
-    #Errors
-    app.add_error_handler(error)
+    app.add_handler(CallbackQueryHandler(button_handler))
 
     # Polls the bot
     print("Polling...")
